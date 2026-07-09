@@ -11,6 +11,11 @@ from xtquant import xtdata
 
 from ..helpers import _numpy_to_python
 
+try:
+    from xtquant import xtbson as _BSON_
+except ImportError:
+    import bson as _BSON_
+
 router = APIRouter(prefix="/api/tabular", tags=["tabular"])
 
 
@@ -62,12 +67,37 @@ def list_tables():
 
 @router.get("/formula")
 def get_tabular_formula(
-    table_name: str = Query(..., description="表名"),
-    stocks: str = Query("", description="股票代码列表，逗号分隔"),
+    stocks: str = Query(..., description="股票代码列表，逗号分隔"),
+    fields: str = Query(..., description="字段列表，逗号分隔，格式为 表名.字段名，如 Balance.total_assets"),
+    period: str = Query("1d", description="K线周期"),
     start_time: str = Query("", description="开始时间"),
     end_time: str = Query("", description="结束时间"),
 ):
-    """按表名查询公式表格数据 → xtdata.get_tabular_formula()"""
-    stock_list = [s.strip() for s in stocks.split(",") if s.strip()] if stocks else []
-    raw = xtdata.get_tabular_formula(stock_list, table_name=table_name, start_time=start_time, end_time=end_time)
-    return {"table": table_name, "data": _numpy_to_python(raw)}
+    """按公式表格查询数据。
+
+    fields 需为 "表名.字段名" 格式（如 Balance.total_assets），
+    xtdata 内部会按表名分组批量调用公式引擎。返回值是 BSON 编码的记录列表，
+    这里解码为 JSON 友好的记录格式。
+
+    Args:
+        stocks: 逗号分隔的股票代码列表。
+        fields: 逗号分隔的字段列表，格式为 表名.字段名。
+        period: K 线周期。
+        start_time: 开始时间。
+        end_time: 结束时间。
+
+    Returns:
+        data: 解码后的表格数据记录列表。
+
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
+    底层调用: xtdata.get_tabular_formula(codes, fields, period, start_time, end_time)
+    """
+    stock_list = [s.strip() for s in stocks.split(",") if s.strip()]
+    field_list = [f.strip() for f in fields.split(",") if f.strip()]
+    try:
+        raw = xtdata.get_tabular_formula(stock_list, field_list, period, start_time, end_time)
+    except Exception as e:
+        return {"error": str(e)}
+    decoded = [_numpy_to_python(_BSON_.BSON.decode(item)) for item in raw] if raw else []
+    return {"data": decoded}

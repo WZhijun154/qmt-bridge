@@ -95,6 +95,12 @@ def del_formula(
 
 @router.get("/list")
 def get_formulas():
-    """获取公式列表 → xtdata.get_formulas()"""
-    result = xtdata.get_formulas()
-    return ok_response(_numpy_to_python(result))
+    """获取公式列表 → xtdata.get_formulas()
+
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+    """
+    try:
+        result = xtdata.get_formulas()
+        return ok_response(_numpy_to_python(result))
+    except Exception as e:
+        return {"error": str(e)}

@@ -49,19 +49,16 @@ class FinancialDownload2Request(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class HisSTDataDownloadRequest(BaseModel):
-    """历史 ST 数据下载请求。"""
-    stock_list: list[str] = Field(default=[], alias="stocks")
+class TabularDataDownloadRequest(BaseModel):
+    """表格数据下载请求。
+
+    对齐 xtdata.download_tabular_data(stock_list, period, start_time=, end_time=)
+    的真实签名——该接口按股票+周期下载，不支持按表名筛选。
+    """
+    stock_list: list[str] = Field(alias="stocks")
     period: str = "1d"
     start_time: str = ""
     end_time: str = ""
-
-    model_config = {"populate_by_name": True}
-
-
-class TabularDataDownloadRequest(BaseModel):
-    """表格数据下载请求。"""
-    table_list: list[str] = Field(default=[], alias="tables")
 
     model_config = {"populate_by_name": True}
 

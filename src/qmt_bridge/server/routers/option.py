@@ -100,7 +100,12 @@ def get_his_option_list(
     Returns:
         data: 历史期权合约列表。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.get_his_option_list(undl_code, dedate)
     """
-    raw = xtdata.get_his_option_list(undl_code, dedate)
-    return {"data": _numpy_to_python(raw)}
+    try:
+        raw = xtdata.get_his_option_list(undl_code, dedate)
+        return {"data": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"error": str(e)}

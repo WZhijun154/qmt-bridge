@@ -75,6 +75,8 @@ def get_sector_info(
     Returns:
         data: 板块详细信息字典。
 
+    依赖 pyarrow 读取底层 parquet 缓存文件，未安装时返回 error 字段而非 500。
+
     底层调用: xtdata.get_sector_info(sector_name=...)
     """
     try:
@@ -82,6 +84,8 @@ def get_sector_info(
     except FileNotFoundError:
         # 板块不存在时返回空字典
         return {"data": {}}
+    except Exception as e:
+        return {"data": {}, "error": str(e)}
     return {"data": _numpy_to_python(raw)}
 
 

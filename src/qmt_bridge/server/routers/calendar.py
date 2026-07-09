@@ -75,10 +75,15 @@ def get_trading_calendar(
         market: 市场代码。
         calendar: 交易日历数据。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.get_trading_calendar(market, start_time=..., end_time=...)
     """
-    raw = xtdata.get_trading_calendar(market, start_time=start_time, end_time=end_time)
-    return {"market": market, "calendar": _numpy_to_python(raw)}
+    try:
+        raw = xtdata.get_trading_calendar(market, start_time=start_time, end_time=end_time)
+        return {"market": market, "calendar": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"market": market, "error": str(e)}
 
 
 @router.get("/trading_period")
@@ -96,10 +101,15 @@ def get_trading_period(
         stock: 合约代码。
         periods: 交易时段列表。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.get_trading_period(stock)
     """
-    raw = xtdata.get_trading_period(stock)
-    return {"stock": stock, "periods": _numpy_to_python(raw)}
+    try:
+        raw = xtdata.get_trading_period(stock)
+        return {"stock": stock, "periods": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"stock": stock, "error": str(e)}
 
 
 # ---------------------------------------------------------------------------

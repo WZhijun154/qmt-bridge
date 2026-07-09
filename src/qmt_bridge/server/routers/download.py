@@ -28,7 +28,6 @@ from ..models import (
     BatchDownloadRequest,
     FinancialDownload2Request,
     FinancialDownloadRequest,
-    HisSTDataDownloadRequest,
     TabularDataDownloadRequest,
 )
 
@@ -118,6 +117,20 @@ def download_sector_data():
     return {"status": "ok"}
 
 
+def _download_no_result(fn) -> dict:
+    """执行无返回值的 download_* 调用，捕获 miniQMT 客户端版本不支持的情况。
+
+    部分 miniQMT 客户端版本未实现底层 commonControl 接口，会抛出
+    RuntimeError（ErrorID 300000 "function not realize"），
+    此时按 period_list 的约定返回 error 字段而非 500。
+    """
+    try:
+        fn()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @router.post("/index_weight")
 def download_index_weight():
     """下载指数成分权重数据。
@@ -153,10 +166,11 @@ def download_etf_info():
     Returns:
         status: 操作状态。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.download_etf_info()
     """
-    xtdata.download_etf_info()
-    return {"status": "ok"}
+    return _download_no_result(xtdata.download_etf_info)
 
 
 @router.post("/cb_data")
@@ -235,10 +249,11 @@ def download_metatable_data():
     Returns:
         status: 操作状态。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.download_metatable_data()
     """
-    xtdata.download_metatable_data()
-    return {"status": "ok"}
+    return _download_no_result(xtdata.download_metatable_data)
 
 
 @router.post("/holiday_data")
@@ -255,10 +270,11 @@ def download_holiday_data():
     Returns:
         status: 操作状态。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.download_holiday_data()
     """
-    xtdata.download_holiday_data()
-    return {"status": "ok"}
+    return _download_no_result(xtdata.download_holiday_data)
 
 
 # ---------------------------------------------------------------------------
@@ -267,55 +283,54 @@ def download_holiday_data():
 
 
 @router.post("/his_st_data")
-def download_his_st_data(req: HisSTDataDownloadRequest):
+def download_his_st_data():
     """下载历史 ST 数据。
 
-    下载指定股票在时间范围内的历史 ST（特别处理）标记数据到服务端本地。
-    此接口为异步操作，下载任务在服务端后台执行。
-
-    Args:
-        req.stock_list: 股票代码列表，如 ``["000001.SZ", "600519.SH"]``。
-        req.period: K 线周期，如 ``"1d"``/``"1m"``/``"5m"``。
-        req.start_time: 开始时间，格式 ``"20230101"``。
-        req.end_time: 结束时间，格式同上。
+    下载全量历史 ST（特别处理）标记数据到服务端本地。此接口为同步阻塞操作。
+    注意：xtdata.download_his_st_data() 不支持按股票/时间范围过滤，为全量下载。
 
     Returns:
-        stocks: 请求的股票代码列表。
+        status: 操作状态。
         result: 下载结果详情。
 
-    底层调用: xtdata.download_his_st_data(stock_list, period=..., ...)
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
+    底层调用: xtdata.download_his_st_data()
     """
-    result = xtdata.download_his_st_data(
-        req.stock_list,
-        period=req.period,
-        start_time=req.start_time,
-        end_time=req.end_time,
-    )
-    return {
-        "status": "ok",
-        "stocks": req.stock_list,
-        "result": _numpy_to_python(result) if result else {},
-    }
+    try:
+        result = xtdata.download_his_st_data()
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+    return {"status": "ok", "result": _numpy_to_python(result) if result else {}}
 
 
 @router.post("/tabular_data")
 def download_tabular_data(req: TabularDataDownloadRequest):
     """下载表格数据。
 
-    下载指定表名的表格数据到服务端本地。此接口为同步阻塞操作。
+    按股票列表 + 周期 + 时间范围下载表格数据到服务端本地。此接口为同步阻塞操作。
 
     Args:
-        req.table_list: 需要下载的表名列表。
+        req.stock_list: 股票代码列表。
+        req.period: K 线周期。
+        req.start_time: 开始时间。
+        req.end_time: 结束时间。
 
     Returns:
-        tables: 请求的表名列表。
-        result: 下载结果详情。
+        stocks: 请求的股票代码列表。
+        period: 请求的周期。
 
-    底层调用: xtdata.download_tabular_data(table_list)
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
+    底层调用: xtdata.download_tabular_data(stock_list, period, start_time=, end_time=)
     """
-    result = xtdata.download_tabular_data(req.table_list)
-    return {
-        "status": "ok",
-        "tables": req.table_list,
-        "result": _numpy_to_python(result) if result else {},
-    }
+    try:
+        xtdata.download_tabular_data(
+            req.stock_list,
+            req.period,
+            start_time=req.start_time,
+            end_time=req.end_time,
+        )
+    except Exception as e:
+        return {"status": "error", "error": str(e), "stocks": req.stock_list, "period": req.period}
+    return {"status": "ok", "stocks": req.stock_list, "period": req.period}

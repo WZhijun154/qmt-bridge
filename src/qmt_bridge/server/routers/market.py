@@ -293,53 +293,62 @@ def get_full_kline(
     Returns:
         该股票的完整 K 线数据。
 
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
     底层调用: xtdata.get_full_kline(stock, period=..., ...)
     """
-    raw = xtdata.get_full_kline(stock, period=period, start_time=start_time, end_time=end_time)
-    return {"stock": stock, "data": _numpy_to_python(raw)}
+    try:
+        raw = xtdata.get_full_kline(stock, period=period, start_time=start_time, end_time=end_time)
+        return {"stock": stock, "data": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"stock": stock, "error": str(e)}
 
 
 @router.get("/fullspeed_orderbook")
 def get_fullspeed_orderbook(
-    stock: str = Query(..., description="股票代码"),
-    start_time: str = Query("", description="开始时间"),
-    end_time: str = Query("", description="结束时间"),
+    stocks: str = Query(..., description="股票代码列表，逗号分隔"),
 ):
-    """获取极速委托簿数据。
+    """获取极速委托簿数据（全推镜像）。
 
     提供逐笔级别的委托簿快照数据，适用于高频策略分析。
 
     Args:
-        stock: 单个股票代码。
-        start_time: 开始时间。
-        end_time: 结束时间。
+        stocks: 逗号分隔的股票代码列表。
 
     Returns:
-        该股票的极速委托簿数据。
+        按股票代码分组的极速委托簿数据。
 
-    底层调用: xtdata.get_fullspeed_orderbook(stock, start_time=..., end_time=...)
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
+    底层调用: xtdata.get_fullspeed_orderbook(code_list)
     """
-    raw = xtdata.get_fullspeed_orderbook(stock, start_time=start_time, end_time=end_time)
-    return {"stock": stock, "data": _numpy_to_python(raw)}
+    stock_list = [s.strip() for s in stocks.split(",")]
+    try:
+        raw = xtdata.get_fullspeed_orderbook(stock_list)
+        return {"data": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.get("/transactioncount")
 def get_transactioncount(
-    stock: str = Query(..., description="股票代码"),
-    start_time: str = Query("", description="开始时间"),
-    end_time: str = Query("", description="结束时间"),
+    stocks: str = Query(..., description="股票代码列表，逗号分隔"),
 ):
-    """获取逐笔成交计数数据。
+    """获取逐笔成交计数数据（全推镜像）。
 
     Args:
-        stock: 单个股票代码。
-        start_time: 开始时间。
-        end_time: 结束时间。
+        stocks: 逗号分隔的股票代码列表。
 
     Returns:
-        该股票的逐笔成交计数数据。
+        按股票代码分组的逐笔成交计数数据。
 
-    底层调用: xtdata.get_transactioncount(stock, start_time=..., end_time=...)
+    部分 miniQMT 客户端版本未实现该接口，此时返回 error 字段而非 500。
+
+    底层调用: xtdata.get_transactioncount(code_list)
     """
-    raw = xtdata.get_transactioncount(stock, start_time=start_time, end_time=end_time)
-    return {"stock": stock, "data": _numpy_to_python(raw)}
+    stock_list = [s.strip() for s in stocks.split(",")]
+    try:
+        raw = xtdata.get_transactioncount(stock_list)
+        return {"data": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"error": str(e)}

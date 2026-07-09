@@ -35,13 +35,21 @@ def get_markets():
 def get_period_list():
     """获取所有支持的 K 线周期列表。
 
+    部分 miniQMT 客户端版本未实现底层 commonControl('getperiodlist') 接口，
+    会抛出 RuntimeError（ErrorID 300000 "function not realize"），
+    此时按 quote_server_status 的约定返回 error 字段而非 500。
+
     Returns:
         periods: 周期列表（如 tick、1m、5m、15m、30m、60m、1d 等）。
+        error: 查询异常时的错误信息（可选）。
 
     底层调用: xtdata.get_period_list()
     """
-    raw = xtdata.get_period_list()
-    return {"periods": _numpy_to_python(raw)}
+    try:
+        raw = xtdata.get_period_list()
+        return {"periods": _numpy_to_python(raw)}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.get("/stock_list")
