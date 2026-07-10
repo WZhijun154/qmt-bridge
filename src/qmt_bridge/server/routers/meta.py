@@ -170,3 +170,21 @@ def get_quote_server_status():
         return {"data": _numpy_to_python(status)}
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.get("/queue_status")
+def get_queue_status():
+    """查看 xtdata 串行锁当前的执行状态与排队情况。
+
+    所有 /api/* 请求本质上是排队串行调用 xtdata 的（见 xtdata_lock.py），
+    本端点用于判断服务当前在处理什么请求、后面还堆了多少个，
+    不参与串行化本身，可在服务被占满时随时查询。
+
+    Returns:
+        current: 当前正在执行的请求（method/path/耗时秒数），空闲时为 None。
+        queue: 排队中的请求列表（method/path/已等待秒数）。
+        queue_length: 排队中的请求数量。
+    """
+    from ..xtdata_lock import get_queue_status as _get_status
+
+    return _get_status()

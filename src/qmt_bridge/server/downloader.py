@@ -282,6 +282,9 @@ def download_history_data2_safe(
     total = len(stock_list)
     results: dict[str, str] = {}
     timeout = STOCK_TIMEOUT.get(period, 10)
+    # 大约每 5% 打一行进度日志（至少间隔 1 只），不管几十只还是几千只
+    # 股票都保持在可读的日志密度，避免大批量下载时服务端控制台长时间静默。
+    log_every = max(1, total // 20)
 
     for i, code in enumerate(stock_list):
         try:
@@ -296,13 +299,20 @@ def download_history_data2_safe(
         if status != "ok":
             logger.warning("K线下载 %s %s: %s", period, code, status)
 
+        finished = i + 1
         if callback is not None:
             callback({
-                "finished": i + 1,
+                "finished": finished,
                 "total": total,
                 "stock": code,
                 "status": status,
             })
+
+        if finished % log_every == 0 or finished == total:
+            logger.info(
+                "K线下载进度 %s: %d/%d (%.0f%%) 最新: %s=%s",
+                period, finished, total, 100 * finished / total, code, status,
+            )
 
     return results
 

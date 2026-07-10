@@ -99,6 +99,28 @@
     标记"scheduler 每天自动跑一次"的下载端点由后台调度进程 `qmt-scheduler` 每 24 小时自动刷新，
     通常不需要手动触发，除非需要立即强制刷新。
 
+### 下载进度与排队状态怎么看
+
+`/api/download/history_data2` 批量下载几百/几千只股票时，服务端控制台会每完成约 5% 打一行
+进度日志（如 `K线下载进度 1d: 120/500 (24%) 最新: 000001.SZ=ok`），不用担心看起来像"卡住了"。
+
+由于所有 `/api/*` 请求都通过同一把串行锁排队执行（xtquant 的 C 扩展不是线程安全的，见
+`xtdata_lock.py`），下载进行期间发起的其它请求会排队等待。可以随时用
+`GET /api/meta/queue_status`（该端点本身不参与排队，可立即返回）查看当前在跑什么、
+已经跑了多久、后面还堆了几个请求：
+
+```json
+{
+  "current": {"method": "POST", "path": "/api/download/history_data2", "elapsed_seconds": 42.3},
+  "queue": [{"method": "GET", "path": "/api/market/full_tick", "waited_seconds": 5.1}],
+  "queue_length": 1
+}
+```
+
+单次请求占用串行锁超过 20s 时，服务端控制台每 20s 还会打一条"仍在执行"心跳日志，
+用于区分"正常在跑但很慢"和"真的卡死了"（后者见 xtdata_lock.py 中的 60s 超时保护，
+`/api/download/*` 端点不受此超时限制）。
+
 ---
 
 ## ⚠️ 当前 miniQMT 客户端不支持（返回 error 字段，非代码 bug）
